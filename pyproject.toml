@@ -1,0 +1,10 @@
+[project]
+name = "comfyui-vdn-h3-24gb"
+version = "1.0.0"
+description = "24GB-optimized VDN-H3 hybrid attention for MiniMax-H3 in ComfyUI"
+license = { file = "LICENSE" }
+dependencies = []
+
+
+[tool.comfy]
+DisplayName = "ComfyUI-VDN-H3-24GB"
