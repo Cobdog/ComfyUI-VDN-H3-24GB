@@ -7,4 +7,5 @@ dependencies = []
 
 
 [tool.comfy]
+PublisherId = "speach1sdef178"
 DisplayName = "ComfyUI-VDN-H3-24GB"
