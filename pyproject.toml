@@ -5,6 +5,10 @@ description = "24GB-optimized VDN-H3 hybrid attention for MiniMax-H3 in ComfyUI"
 license = { file = "LICENSE" }
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/Speach1sdef178/ComfyUI-VDN-H3-24GB"
+Documentation = "https://github.com/Speach1sdef178/ComfyUI-VDN-H3-24GB#readme"
+Issues = "https://github.com/Speach1sdef178/ComfyUI-VDN-H3-24GB/issues"
 
 [tool.comfy]
 PublisherId = "speach1sdef178"
