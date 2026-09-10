@@ -22,11 +22,14 @@ and at 0.8 MP for a 10 second clip. Character/style LoRA composition also
 completed successfully. See [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md) for
 the measured runs and A/B notes.
 
-### Visual A/B comparison
+### Visual A/B comparison — 1.0.0 vs 1.1.0
 
-![Version 1.0.0 versus 1.1.0 comparison](assets/VDN-H3_v1.1.0_comparison_preview.jpg)
+[![Version 1.0.0 versus 1.1.0 comparison](assets/VDN-H3_v1.1.0_comparison_preview.jpg)](example_workflows/examples/VDN-H3_v1.0.0_vs_v1.1.0_comparison.mp4)
 
-Version 1.0.0 is shown on the left; version 1.1.0 is shown on the right.
+**Version 1.0.0** is shown on the left; **Version 1.1.0** is shown on the right.  
+**Click the comparison image to open the synchronized video.**
+
+[Open the comparison video directly](example_workflows/examples/VDN-H3_v1.0.0_vs_v1.1.0_comparison.mp4)
 
 ## What this release contains
 
