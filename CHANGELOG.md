@@ -2,6 +2,8 @@
 
 ## 1.1.0 — 2026-09-10
 
+Public release version: **1.1.0**.
+
 - Restored token-refiner attention adapter mapping for ComfyUI's fused QKV
   layout. Released adapter application increases from `default=100, turbo=204`
   to `default=104, turbo=208`.
