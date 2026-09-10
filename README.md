@@ -4,7 +4,7 @@
 validated v49 AutoMemory/AutoLongCache policy and adds three narrowly scoped
 correctness and memory-safety fixes tested on an RTX 3090 24 GB.
 
-## Version 1.1.0 (v50)
+## Version 1.1.0
 
 - Restores the released token-refiner attention adapter mapping for ComfyUI's
   fused QKV layout. The complete released adapter is now applied (`default=104`,
@@ -24,10 +24,9 @@ the measured runs and A/B notes.
 
 ### Visual A/B comparison
 
-[![Previous version versus v50 comparison](assets/VDN-H3_v50_comparison_preview.jpg)](assets/VDN-H3_v50_comparison.mp4)
+![Version 1.0.0 versus 1.1.0 comparison](assets/VDN-H3_v1.1.0_comparison_preview.jpg)
 
-Previous version is shown on the left; v50 is shown on the right. Click the
-preview to open the synchronized 5-second MP4 comparison.
+Version 1.0.0 is shown on the left; version 1.1.0 is shown on the right.
 
 ## What this release contains
 
@@ -155,9 +154,9 @@ python custom_nodes\ComfyUI-VDN-H3-24GB\tools\install_minimax_block_loop_hook.py
 ## Tested profile
 
 RTX 3090 24 GB, Windows, ComfyUI 0.33.x-era MiniMax-H3 implementation, 0.4 MP,
-8-step DMD and H3 FL2VA INT8 ConvRot. Successful v50 runs covered 5, 10, 15
-and 20 seconds at 0.4 MP, plus 10 seconds at 0.8 MP. This is a tested profile,
-not a guarantee for every 24 GB GPU or future ComfyUI build.
+8-step DMD and H3 FL2VA INT8 ConvRot. Successful version 1.1.0 runs covered 5,
+10, 15 and 20 seconds at 0.4 MP, plus 10 seconds at 0.8 MP. This is a tested
+profile, not a guarantee for every 24 GB GPU or future ComfyUI build.
 
 ## Compatibility note
 
