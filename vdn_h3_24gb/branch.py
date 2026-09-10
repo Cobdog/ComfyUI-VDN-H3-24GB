@@ -306,17 +306,51 @@ def _tf32_matmul():
     return _Ctx()
 
 
+_STATISTICS_WORKSPACE_BYTES = 1 << 30
+
+
 def frame_statistics(kf, vf, beta, a_fp32=True):
+    """Prepare independent per-frame statistics in bounded batches.
+
+    The original full-clip path temporarily materialized several FP32 copies of
+    every frame. Long clips can exceed the 24 GB budget even though the final A/B
+    statistics fit. Batching complete frames preserves the exact token reduction
+    and dtypes while bounding those temporary allocations to roughly 1 GiB.
+    """
+    frames, heads, tokens, dim = kf.shape
+    # K repack, FP32 K and weighted K, plus the weighted-V multiply/repack.
+    per_frame = heads * tokens * (
+        dim * (kf.element_size() + (8 if a_fp32 else kf.element_size()))
+        + 2 * vf.shape[-1] * vf.element_size())
+    batch = max(1, _STATISTICS_WORKSPACE_BYTES // max(1, per_frame))
+    if frames <= batch:
+        return _frame_statistics_chunk(kf, vf, beta, a_fp32)
+
+    a = torch.empty((frames, heads, dim, dim), device=kf.device,
+                    dtype=torch.float32)
+    b = torch.empty((frames, heads, vf.shape[-1], dim), device=kf.device,
+                    dtype=torch.float32)
+    for start in range(0, frames, batch):
+        stop = min(start + batch, frames)
+        ac, bc = _frame_statistics_chunk(
+            kf[start:stop], vf[start:stop], beta[start:stop], a_fp32)
+        a[start:stop].copy_(ac)
+        b[start:stop].copy_(bc)
+        del ac, bc
+    return a, b
+
+
+def _frame_statistics_chunk(kf, vf, beta, a_fp32=True):
     """A[f,h,k,l] = sum_s k beta k,  B[f,h,v,k] = sum_s v beta k, over one chunk's
     rows. A in fp32 (bf16's 8 mantissa bits break the conditioning I+A needs), B left
     in bf16 for the tensor-core GEMM and promoted on the store. Operates with autocast
     off implicitly -- callers run under inference no_grad, no ambient autocast."""
     with torch.autocast(device_type=kf.device.type, enabled=False):
         kf16 = kf.contiguous()
-        kf32 = kf16.float()
-        scaled32 = (kf32 * beta.unsqueeze(-1).float()).contiguous()
         vb = (vf * beta.unsqueeze(-1).to(vf.dtype)).contiguous()
         if a_fp32:
+            kf32 = kf16.float()
+            scaled32 = (kf32 * beta.unsqueeze(-1).float()).contiguous()
             prev = torch.backends.cuda.matmul.allow_tf32
             torch.backends.cuda.matmul.allow_tf32 = True
             try:
@@ -327,7 +361,7 @@ def frame_statistics(kf, vf, beta, a_fp32=True):
             a = torch.matmul((kf * beta.unsqueeze(-1).to(kf.dtype)).contiguous()
                              .transpose(-1, -2), kf).float()
         a = 0.5 * (a + a.transpose(-1, -2))
-        b = torch.matmul(vb.transpose(-1, -2), kf).float()
+        b = torch.matmul(vb.transpose(-1, -2), kf16).float()
         return a, b
 
 

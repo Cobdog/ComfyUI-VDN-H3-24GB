@@ -1,6 +1,33 @@
 # ComfyUI-VDN-H3-24GB
 
-24 GB-oriented MiniMax-H3 VDN runtime for ComfyUI, based on the v49 memory-policy build tested on an RTX 3090 Ti 24 GB.
+24 GB-oriented MiniMax-H3 VDN runtime for ComfyUI. Version 1.1.0 keeps the
+validated v49 AutoMemory/AutoLongCache policy and adds three narrowly scoped
+correctness and memory-safety fixes tested on an RTX 3090 24 GB.
+
+## Version 1.1.0 (v50)
+
+- Restores the released token-refiner attention adapter mapping for ComfyUI's
+  fused QKV layout. The complete released adapter is now applied (`default=104`,
+  `turbo=208`, previously `100/204`).
+- Bounds temporary frame-statistics preparation to approximately 1 GiB by
+  batching complete frames. Token reductions, compute dtypes and output tensors
+  are unchanged.
+- Records prefetched INT8/plain storages on the consumer CUDA stream, including
+  with `cudaMallocAsync`, to prevent premature allocator reuse.
+- Preserves the established v49 solver, AutoMemory, AutoLongCache and Ampere
+  launch presets.
+
+Validated under Windows at 0.4 MP for continuous 5, 10, 15 and 20 second clips,
+and at 0.8 MP for a 10 second clip. Character/style LoRA composition also
+completed successfully. See [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md) for
+the measured runs and A/B notes.
+
+### Visual A/B comparison
+
+[![Previous version versus v50 comparison](assets/VDN-H3_v50_comparison_preview.jpg)](assets/VDN-H3_v50_comparison.mp4)
+
+Previous version is shown on the left; v50 is shown on the right. Click the
+preview to open the synchronized 5-second MP4 comparison.
 
 ## What this release contains
 
@@ -12,7 +39,7 @@
 
 ## Installation
 
-Extract/clone the repository so the final path is exactly:
+Extract or clone the repository so the final path is exactly:
 
 ```text
 <ComfyUI>/custom_nodes/ComfyUI-VDN-H3-24GB/
@@ -30,11 +57,10 @@ Start_VDN_H3_24GB.bat
 Do **not** leave an extra nested directory such as:
 
 ```text
-custom_nodes/ComfyUI-VDN-H3-24GB/
+custom_nodes/ComfyUI-VDN-H3-24GB-main/ComfyUI-VDN-H3-24GB/
 ```
 
 `Check_Installation_24GB.bat` can verify the basic layout.
-
 
 ## VDN checkpoint
 
@@ -42,89 +68,54 @@ The VDN stage checkpoint is distributed separately on Hugging Face:
 
 [**speach1sdef178/VDN-H3-INT8-ConvRot-ComfyUI**](https://huggingface.co/speach1sdef178/VDN-H3-INT8-ConvRot-ComfyUI)
 
-Download the complete folder:
+Download the **complete** stage directory and place it at:
 
 ```text
-stage-dmd-step-250-int8_convrot_comfyui
+<ComfyUI>/models/vdn/stage-dmd-step-250-int8_convrot_comfyui/
+├─ model_spec.json
+├─ linear_branch/
+│  └─ model_int8_convrot_comfyui.safetensors
+└─ adapters/
+   ├─ default/
+   │  ├─ adapter_config.json
+   │  └─ adapter_model.safetensors
+   └─ turbo/
+      ├─ adapter_config.json
+      └─ adapter_model.safetensors
 ```
 
-and place it at:
-
-```text
-ComfyUI/models/vdn/stage-dmd-step-250-int8_convrot_comfyui/
-```
-
-Do not download only the linear-branch `.safetensors`; the complete stage also contains `model_spec.json`, the default adapter, and the turbo adapter.
+Do not download only the linear-branch `.safetensors`. The complete stage needs
+`model_spec.json` and both adapter directories. The VDN stage does not replace
+the MiniMax-H3 base diffusion model.
 
 ## Starting ComfyUI
 
-The included `Start_VDN_H3_24GB.bat` can be run directly from the node folder. It resolves the ComfyUI root from its own location and does not depend on the Command Prompt working directory.
+The included `Start_VDN_H3_24GB.bat` resolves the ComfyUI root from its own
+location and can be run directly from the node folder.
 
-If your ComfyUI uses Conda, either activate the environment before launching or edit this line near the top of the BAT:
+If your ComfyUI uses Conda, either activate the environment first or edit this
+line near the top of the BAT:
 
 ```bat
 set "VDN_CONDA_ENV="
 ```
 
-to your environment name, for example:
+For example:
 
 ```bat
 set "VDN_CONDA_ENV=ComfyUI_Krea2"
 ```
 
-The BAT verifies Python, resolves the hook path, patches/checks the MiniMax block loop, and only then starts ComfyUI. If SageAttention is installed, the BAT enables it automatically; otherwise it launches without the SageAttention flag and warns that performance may differ.
+The BAT verifies Python, resolves the hook path, patches/checks the MiniMax
+block loop, and then starts ComfyUI. If SageAttention is installed, it enables
+it automatically; otherwise it launches without that flag and warns that
+performance may differ.
 
+`Start_VDN_H3_24GB_CONDA_TEMPLATE.bat` is also included as an editable template.
 
 ## Tested node preset
 
-For the 24 GB profile, use the **Apply VDN-H3 24GB Optimized** node with:
-
-```text
-vdn_checkpoint      = stage-dmd-step-250-int8_convrot_comfyui
-apply_turbo_adapter = true
-strength            = 1.0
-lora_mode           = merge
-branch_weights      = stream
-retain_buffers      = auto
-attention_backend   = grouped
-```
-
-Connect the **same H3 LATENT** that goes to the sampler to the node's `auto_memory_latent` input. This connection is required for the tested duration-aware 24 GB AutoMemory/AutoLongCache policy. The included example workflow is configured this way.
-
-`branch_weights=stream` is the tested 24 GB default. `auto` remains available for experimentation, but it is not the published 3090 Ti preset.
-
-## Core hook
-
-LongCache needs a small hook in:
-
-```text
-comfy/ldm/minimax/model.py
-```
-
-`tools/install_minimax_block_loop_hook.py` is deliberately conservative: it only patches a recognized MiniMax-H3 block-loop layout, validates the result with Python AST parsing, creates `model.py.vdn_longcache.bak` before the first modification, and is safe to run repeatedly.
-
-To restore the backup manually:
-
-```bat
-python custom_nodes\ComfyUI-VDN-H3-24GB\tools\install_minimax_block_loop_hook.py --comfy-ui . --revert
-```
-
-## Tested profile
-
-RTX 3090 Ti 24 GB, Windows, ComfyUI 0.33.x-era MiniMax-H3 implementation, 0.4 MP, 8-step DMD, H3 FL2VA INT8 ConvRot. Tests completed at 5 s, 10 s, 12 s and 15 s. This is a tested configuration, not a guarantee for every 24 GB GPU or every future ComfyUI build.
-
-## Compatibility note
-
-The public node IDs and Python package namespace are distinct from other VDN-H3 ports so both packages can be installed without sharing the same ComfyUI node IDs. The MiniMax core hook is a ComfyUI-core patch and therefore remains a shared runtime modification; the installer is idempotent and creates a backup.
-
-## License / attribution
-
-This project is derived from the released VideoDeltaNet/OpenVDN work and an existing ComfyUI VDN-H3 port. Preserve the included `LICENSE` notices. MiniMax-H3 model weights and VDN checkpoints may have separate licenses; review them before redistribution or commercial use.
-
-
-## Tested 24 GB preset
-
-Use the Optimized node with:
+Use the **Apply VDN-H3 24GB Optimized** node with:
 
 ```text
 vdn_checkpoint      = stage-dmd-step-250-int8_convrot_comfyui
@@ -137,31 +128,47 @@ attention_backend   = grouped
 auto_memory_latent  = the SAME H3 latent used by the sampler
 ```
 
-The 24 GB launcher sets the memory policy used for our validated Ampere tests.
+Connecting the same latent to `auto_memory_latent` is required for the tested
+duration-aware 24 GB policy. The included example workflow is configured this
+way. `branch_weights=stream` is the validated 24 GB default; `auto` remains
+available for experimentation.
 
-### Validated release-build result
+## Core hook
 
-- GPU: RTX 3090 Ti 24 GB
-- Base: MiniMax H3 FL2VA INT8 ConvRot
-- Resolution: 0.4 MP
-- Duration: 10 s
-- Steps: 8
-- Sampling: **2:08 total, 16.06 s/it**
-
-Longer 5 s / 10 s / 12 s / 15 s workloads were also completed during development on the same 24 GB system.
-
-## Windows launcher
-
-`Start_VDN_H3_24GB.bat` expects `python` to resolve to the same working environment you normally use for ComfyUI.  
-If you use Conda, activate that environment first, then run the BAT.
-
-A template is also included:
+LongCache needs a small hook in:
 
 ```text
-Start_VDN_H3_24GB_CONDA_TEMPLATE.bat
+comfy/ldm/minimax/model.py
 ```
 
-Edit `YOUR_COMFY_ENV` to your own environment name.
+`tools/install_minimax_block_loop_hook.py` only patches a recognized
+MiniMax-H3 block-loop layout, validates the result with Python AST parsing,
+creates `model.py.vdn_longcache.bak` before the first modification, and is safe
+to run repeatedly.
 
-The launcher checks the MiniMax block-loop hook before starting ComfyUI.
+To restore the backup manually:
 
+```bat
+python custom_nodes\ComfyUI-VDN-H3-24GB\tools\install_minimax_block_loop_hook.py --comfy-ui . --revert
+```
+
+## Tested profile
+
+RTX 3090 24 GB, Windows, ComfyUI 0.33.x-era MiniMax-H3 implementation, 0.4 MP,
+8-step DMD and H3 FL2VA INT8 ConvRot. Successful v50 runs covered 5, 10, 15
+and 20 seconds at 0.4 MP, plus 10 seconds at 0.8 MP. This is a tested profile,
+not a guarantee for every 24 GB GPU or future ComfyUI build.
+
+## Compatibility note
+
+The public node IDs and Python package namespace are distinct from other VDN-H3
+ports, so both packages can be installed without sharing ComfyUI node IDs. The
+MiniMax core hook is a shared ComfyUI runtime modification; the installer is
+idempotent and creates a backup.
+
+## License / attribution
+
+This project is derived from the released VideoDeltaNet/OpenVDN work and an
+existing ComfyUI VDN-H3 port. Preserve the included `LICENSE` notices. MiniMax-H3
+model weights and VDN checkpoints may have separate licenses; review them before
+redistribution or commercial use.

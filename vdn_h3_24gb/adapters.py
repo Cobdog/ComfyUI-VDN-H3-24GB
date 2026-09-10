@@ -22,6 +22,10 @@ def _comfy_path(key, is_refiner):
     """diffusers module path -> (comfy module path, conversion kind)."""
     if is_refiner:
         stem = key.replace("token_refiner.refiner_blocks.", "token_refiner.blocks.")
+        # Diffusers' token refiner attention is not wrapped by HybridAttention,
+        # while ComfyUI exposes the fused projections below ``attn.orig``.
+        # Without this re-rooting the released refiner adapter is silently skipped.
+        stem = stem.replace(".attn.to_", ".attn.orig.to_")
     else:
         stem = key.replace("transformer_blocks.", "blocks.")
     for proj in _ATTN_QKV:
