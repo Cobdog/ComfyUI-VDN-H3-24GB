@@ -1,11 +1,11 @@
-# Version 1.1.0 (v50) validation — 2026-09-10
+# Version 1.1.0 validation — 2026-09-10
 
 Test system: RTX 3090 24 GB, Windows, eight-step DMD, MiniMax-H3 FL2VA pruned
 INT8 ConvRot base, INT8 ConvRot VDN stage, `branch_weights=stream`, transient
 buffers, cuDNN window SDPA and the established v49 AutoMemory/AutoLongCache
 production policy.
 
-## Completed v50 runs
+## Completed version 1.1.0 runs
 
 | Duration | Resolution class | Sampling | Mean / step | Result |
 |---:|---:|---:|---:|---|
@@ -25,22 +25,22 @@ The 15-to-5-second transition completed successfully. AutoMemory unloaded stale
 LONG residency, restored the SHORT profile and completed the following render
 without an OOM, CUDA error, NaN or Inf.
 
-## Previous release versus v50
+## Version 1.0.0 versus version 1.1.0
 
 Same prompt, seed, workflow, 0.4 MP geometry and eight-step schedule:
 
-| Test | Previous release | v50 | Difference |
+| Test | Version 1.0.0 | Version 1.1.0 | Difference |
 |---|---:|---:|---:|
-| 10 s sampling | 2:00 (15.11 s/step) | 2:05 (15.74 s/step) | v50 about 4.2% slower |
-| 10 s full execution | 186.93 s | 189.01 s | v50 about 1.1% slower |
-| 6.583333 s sampling | 1:23 (10.46 s/step) | 1:27 (10.89 s/step) | v50 about 4.1% slower |
+| 10 s sampling | 2:00 (15.11 s/step) | 2:05 (15.74 s/step) | 1.1.0 about 4.2% slower |
+| 10 s full execution | 186.93 s | 189.01 s | 1.1.0 about 1.1% slower |
+| 6.583333 s sampling | 1:23 (10.46 s/step) | 1:27 (10.89 s/step) | 1.1.0 about 4.1% slower |
 
 The released adapter application count changed from `default=100, turbo=204`
 to `default=104, turbo=208`. The restored token-refiner mappings produced a
 material prompt-adherence improvement in two paired reviews. In the more
-demanding railway-platform test, v50 better preserved the empty carriage,
+demanding railway-platform test, version 1.1.0 better preserved the empty carriage,
 subject position outside the train, turn toward the train and final composition,
 while substantially reducing an explicitly forbidden human reflection.
 
 The unusual-duration connection-reset report from another installation did not
-reproduce locally on either version and is not claimed as fixed by v50.
+reproduce locally on either version and is not claimed as fixed by version 1.1.0.
