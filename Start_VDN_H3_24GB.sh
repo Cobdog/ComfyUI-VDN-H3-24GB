@@ -61,8 +61,7 @@ if [[ -n $PYTHON_OVERRIDE ]]; then  # absolutize before any cd
 fi
 
 # ---- Locate ComfyUI root and node folder (same search as the BAT) ----
-# Search the as-invoked path first (like %~dp0), then the symlink-resolved path,
-# so a symlinked custom_nodes still finds its parent ComfyUI.
+# Try the as-invoked path first (like %~dp0), then the symlink-resolved one.
 SELF_DIR=$(dirname -- "$0")
 CANON_DIR=$(dirname -- "$(readlink -f -- "$0")")
 
@@ -149,7 +148,7 @@ unset VDN_H3_LONG_CACHE_DEPTH VDN_H3_WINDOW_BLOCKS VDN_H3_WINDOW_FALLBACK VDN_H3
 # ---- Find a Python that is the working ComfyUI environment ----
 TRIED=()
 
-try_python() {  # $1 = description, $2 = interpreter; sets PYTHON on success
+try_python() {
     if [[ ! -x $2 ]]; then TRIED+=("$1: not found ($2)"); return 1; fi
     if ! "$2" -c "import sqlalchemy" >/dev/null 2>&1; then
         TRIED+=("$1: failed sqlalchemy check, not the ComfyUI environment ($2)")
@@ -160,6 +159,7 @@ try_python() {  # $1 = description, $2 = interpreter; sets PYTHON on success
 }
 
 PYTHON=
+p=
 
 if [[ -n $PYTHON_OVERRIDE ]]; then
     try_python "--python / VDN_PYTHON override" "$PYTHON_OVERRIDE" \
@@ -168,8 +168,7 @@ $PYTHON_OVERRIDE
 It must be executable and able to import sqlalchemy."
 fi
 
-# VDN_CONDA_ENV is an explicit choice: it outranks the heuristic tiers below,
-# and a bad value aborts instead of falling back.
+# VDN_CONDA_ENV is an explicit choice: it outranks the heuristics below, and a bad value aborts.
 if [[ -z $PYTHON && -n ${VDN_CONDA_ENV:-} ]]; then
     if [[ $VDN_CONDA_ENV == /* ]]; then
         try_python "conda env at $VDN_CONDA_ENV" "$VDN_CONDA_ENV/bin/python" \
@@ -221,9 +220,7 @@ Set VDN_CONDA_ENV to choose one."
     fi
 fi
 
-# uv projects: no venv yet + uv.lock present -> ask for (or run) uv sync.
-# Skipped whenever a venv directory exists, an interpreter was chosen above,
-# or the user is only reverting the hook (recovery must not require a venv).
+# uv project without a venv yet: ask for (or run) uv sync. Never blocks --revert-hook.
 UV_GATE=0
 if (( ! REVERT_HOOK )) && [[ -z $PYTHON && ! -d $COMFY_ROOT/venv && ! -d $COMFY_ROOT/.venv && -f $COMFY_ROOT/uv.lock ]] \
    && command -v uv >/dev/null 2>&1; then
@@ -254,14 +251,10 @@ if [[ -z $PYTHON ]]; then
     try_python "python3 from PATH" "${p:-python3}" || true
 fi
 
-# Reverting must stay possible when the ComfyUI environment itself is broken:
-# the hook installer is stdlib-only, so plain python3 is enough for it.
-if [[ -z $PYTHON ]] && ((REVERT_HOOK)); then
-    p=$(command -v python3 2>/dev/null || true)
-    if [[ -n $p ]]; then
-        echo "$TAG no ComfyUI environment found; using plain python3 for --revert-hook."
-        PYTHON=$p
-    fi
+# Recovery path: the hook installer is stdlib-only, so plain python3 suffices.
+if [[ -z $PYTHON && -n $p ]] && ((REVERT_HOOK)); then
+    echo "$TAG no ComfyUI environment found; using plain python3 for --revert-hook."
+    PYTHON=$p
 fi
 
 if [[ -z $PYTHON ]]; then
