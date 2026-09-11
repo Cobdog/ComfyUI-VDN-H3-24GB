@@ -108,11 +108,12 @@ as an editable template that activates the environment first.
 
 ### Linux
 
-Run from anywhere — the script locates the ComfyUI root and the node folder
-itself:
+Run from any directory — the script locates the ComfyUI root and the node
+folder itself (requires bash 4 or newer; the `--dry-run` mode below changes
+nothing on disk):
 
 ```bash
-bash custom_nodes/ComfyUI-VDN-H3-24GB/Start_VDN_H3_24GB.sh
+bash /path/to/ComfyUI/custom_nodes/ComfyUI-VDN-H3-24GB/Start_VDN_H3_24GB.sh
 ```
 
 The script exports the same VDN-H3 environment profile as the BAT, runs the
@@ -178,8 +179,13 @@ To restore the backup manually:
 python custom_nodes\ComfyUI-VDN-H3-24GB\tools\install_minimax_block_loop_hook.py --comfy-ui . --revert
 ```
 
-On Linux, `bash custom_nodes/ComfyUI-VDN-H3-24GB/Start_VDN_H3_24GB.sh --revert-hook`
-does the same.
+On Linux, `bash /path/to/ComfyUI/custom_nodes/ComfyUI-VDN-H3-24GB/Start_VDN_H3_24GB.sh --revert-hook`
+does the same; since the installer only uses the Python standard library, the
+direct form works even without a working ComfyUI environment:
+
+```bash
+python3 /path/to/ComfyUI/custom_nodes/ComfyUI-VDN-H3-24GB/tools/install_minimax_block_loop_hook.py --comfy-ui /path/to/ComfyUI --revert
+```
 
 ## Tested profile
 

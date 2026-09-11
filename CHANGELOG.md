@@ -3,13 +3,20 @@
 ## Unreleased
 
 - Added `Start_VDN_H3_24GB.sh`, a Linux launcher mirroring the BAT that
-  auto-detects the ComfyUI Python environment (active environment, `venv/`,
-  `.venv/` including uv-managed ones, conda via `VDN_CONDA_ENV` or a unique
-  `*comfy*` name, then `python3`), validates each candidate with an
-  `import sqlalchemy` check, probes SageAttention before enabling it, and
-  supports `--dry-run`, `--revert-hook`, `--uv-sync` and `--` passthrough.
-- Added `Check_Installation_24GB.sh` and a `.gitattributes` entry keeping
-  shell scripts LF-only.
+  finds the ComfyUI Python environment by itself, in this order:
+  `--python`/`VDN_PYTHON`, `VDN_CONDA_ENV`, the active environment,
+  `venv/` or `.venv/` in the ComfyUI root (uv-created included), a uniquely
+  `*comfy*`-named conda environment, then `python3` — each validated with an
+  `import sqlalchemy` check. Probes SageAttention before enabling it, and
+  supports `--dry-run` (fully non-mutating), `--revert-hook`, `--uv-sync`
+  and `--` passthrough. Requires bash 4 or newer.
+- Added `Check_Installation_24GB.sh` and a `.gitattributes` keeping shell
+  scripts LF-only and `.bat` files CRLF.
+- Corrected stale README instructions: the `VDN_CONDA_ENV` line the Windows
+  section told users to edit does not exist in the BAT (conda users should
+  use the included template), and the sage-attention fallback described
+  there applies to the new Linux script, not to the BAT, which always passes
+  `--use-sage-attention`.
 
 ## 1.1.0 — 2026-09-10
 

@@ -3,6 +3,10 @@
 # finds the ComfyUI Python environment (venv, .venv/uv, conda, system) by itself.
 set -euo pipefail
 shopt -s nullglob
+if ((BASH_VERSINFO[0] < 4)); then
+    echo "[VDN-H3-24GB] ERROR: bash >= 4 is required (run: bash $0)" >&2
+    exit 1
+fi
 
 TAG="[VDN-H3-24GB]"
 HOOK_NAME=install_minimax_block_loop_hook.py
@@ -14,8 +18,11 @@ Usage: ${0##*/} [--dry-run] [--revert-hook] [--uv-sync] [--python PATH] [-- MAIN
   --dry-run      resolve and validate everything, print the launch command, don't launch
   --revert-hook  undo the MiniMax block-loop hook and exit
   --uv-sync      if uv.lock exists but no venv does, run "uv sync" before detection
-  --python PATH  use this interpreter (also settable via VDN_PYTHON)
+  --python PATH  use this interpreter (--python=PATH also works; or set VDN_PYTHON)
   -- ...         remaining arguments are passed to ComfyUI's main.py
+
+Conda environments can be chosen with VDN_CONDA_ENV (name or path).
+Exit codes: 0 success, 1 runtime error, 2 usage error. Requires bash >= 4.
 EOF
 }
 
@@ -170,7 +177,7 @@ if [[ -z $PYTHON && -n ${VDN_CONDA_ENV:-} ]]; then
     elif command -v conda >/dev/null 2>&1; then
         mapfile -t CONDA_ENVS < <(conda env list --json 2>/dev/null | sed -n '/"envs":/,/]/p' | grep -o '"/[^"]*"' | tr -d '"')
         CONDA_HIT=
-        for e in "${CONDA_ENVS[@]}"; do
+        for e in ${CONDA_ENVS[@]+"${CONDA_ENVS[@]}"}; do
             if [[ $(basename -- "$e") == "$VDN_CONDA_ENV" ]]; then CONDA_HIT=$e; break; fi
         done
         if [[ -n $CONDA_HIT ]]; then
@@ -200,7 +207,7 @@ fi
 if [[ -z $PYTHON ]] && command -v conda >/dev/null 2>&1; then
     mapfile -t CONDA_ENVS < <(conda env list --json 2>/dev/null | sed -n '/"envs":/,/]/p' | grep -o '"/[^"]*"' | tr -d '"')
     MATCHES=()
-    for e in "${CONDA_ENVS[@]}"; do
+    for e in ${CONDA_ENVS[@]+"${CONDA_ENVS[@]}"}; do
         if [[ $(basename -- "${e,,}") == *comfy* ]]; then MATCHES+=("$e"); fi
     done
     if ((${#MATCHES[@]} == 1)); then
@@ -216,25 +223,44 @@ fi
 
 # uv projects: no venv yet + uv.lock present -> ask for (or run) uv sync.
 # Skipped whenever a venv directory exists or an interpreter was chosen above.
+UV_GATE=0
 if [[ -z $PYTHON && ! -d $COMFY_ROOT/venv && ! -d $COMFY_ROOT/.venv && -f $COMFY_ROOT/uv.lock ]] \
    && command -v uv >/dev/null 2>&1; then
+    UV_GATE=1
     if ((UV_SYNC)); then
         if ((DRY_RUN)); then
-            echo "$TAG dry run: would run 'uv sync' in \"$COMFY_ROOT\""
-        else
-            (cd -- "$COMFY_ROOT" && uv sync) || die "uv sync failed."
-            try_python ".venv after uv sync" "$COMFY_ROOT/.venv/bin/python" || true
+            echo "$TAG dry run: would run 'uv sync' in \"$COMFY_ROOT\", then use its .venv."
+            exit 0
         fi
+        (cd -- "$COMFY_ROOT" && uv sync) || die "uv sync failed."
+        try_python ".venv after uv sync" "$COMFY_ROOT/.venv/bin/python" || true
     else
         echo "$TAG uv.lock found but the ComfyUI root has no venv."
         echo "$TAG Run 'uv sync' in \"$COMFY_ROOT\", or rerun with --uv-sync."
-        ((DRY_RUN)) || exit 1
+        if ((DRY_RUN)); then
+            echo "$TAG dry run: a real run stops here until the venv exists."
+            exit 0
+        fi
+        exit 1
     fi
+fi
+if ((UV_SYNC && ! UV_GATE)); then
+    echo "$TAG --uv-sync ignored: it only applies when uv.lock exists and no venv does."
 fi
 
 if [[ -z $PYTHON ]]; then
     p=$(command -v python3 2>/dev/null || true)
     try_python "python3 from PATH" "${p:-python3}" || true
+fi
+
+# Reverting must stay possible when the ComfyUI environment itself is broken:
+# the hook installer is stdlib-only, so plain python3 is enough for it.
+if [[ -z $PYTHON ]] && ((REVERT_HOOK)); then
+    p=$(command -v python3 2>/dev/null || true)
+    if [[ -n $p ]]; then
+        echo "$TAG no ComfyUI environment found; using plain python3 for --revert-hook."
+        PYTHON=$p
+    fi
 fi
 
 if [[ -z $PYTHON ]]; then
@@ -265,7 +291,7 @@ if ((DRY_RUN)); then
     HOOK_OUT=$("$PYTHON" "$HOOK" --comfy-ui "$COMFY_ROOT" --check) \
         || die "block-loop hook check failed."
     echo "$HOOK_OUT"
-    if [[ $HOOK_OUT == *missing* ]]; then
+    if [[ $HOOK_OUT == "VDN-H3-24GB: block-loop hook missing "* ]]; then
         echo "$TAG note: a real run will install the hook (backup kept alongside)."
     fi
 else
@@ -280,7 +306,7 @@ if "$PYTHON" -c "from sageattention import sageattn" >/dev/null 2>&1; then
 else
     echo "$TAG SageAttention not found; launching without it. Performance may differ."
 fi
-ARGS+=("${EXTRA_ARGS[@]}")
+ARGS+=(${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})
 
 if ((DRY_RUN)); then
     echo "$TAG dry run OK. Would run in \"$COMFY_ROOT\":"
