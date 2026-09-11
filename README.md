@@ -140,6 +140,9 @@ Options: `--dry-run` (resolve and validate everything and print the launch
 command without launching), `--revert-hook` (undo the block-loop hook and
 exit), `--uv-sync`, and `--` to forward extra arguments to `main.py`.
 
+A launcher started in the background (shell `&`, cron) ignores Ctrl-C by
+POSIX rules; stop it with `kill -TERM <pid>`.
+
 ## Tested node preset
 
 Use the **Apply VDN-H3 24GB Optimized** node with:

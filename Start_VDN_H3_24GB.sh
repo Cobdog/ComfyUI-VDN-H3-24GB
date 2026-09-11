@@ -71,7 +71,7 @@ find_root() {
     for base in "$SELF_DIR" "$CANON_DIR"; do
         for d in "$base" "$base/ComfyUI" "$base/../.." "$base/../../.."; do
             if [[ -f $d/main.py ]]; then
-                root=$(cd -- "$d" 2>/dev/null && pwd || true)
+                root=$(cd -P -- "$d" 2>/dev/null && pwd || true)
                 if [[ -n $root ]]; then printf '%s\n' "$root"; return 0; fi
             fi
         done
@@ -222,9 +222,10 @@ Set VDN_CONDA_ENV to choose one."
 fi
 
 # uv projects: no venv yet + uv.lock present -> ask for (or run) uv sync.
-# Skipped whenever a venv directory exists or an interpreter was chosen above.
+# Skipped whenever a venv directory exists, an interpreter was chosen above,
+# or the user is only reverting the hook (recovery must not require a venv).
 UV_GATE=0
-if [[ -z $PYTHON && ! -d $COMFY_ROOT/venv && ! -d $COMFY_ROOT/.venv && -f $COMFY_ROOT/uv.lock ]] \
+if (( ! REVERT_HOOK )) && [[ -z $PYTHON && ! -d $COMFY_ROOT/venv && ! -d $COMFY_ROOT/.venv && -f $COMFY_ROOT/uv.lock ]] \
    && command -v uv >/dev/null 2>&1; then
     UV_GATE=1
     if ((UV_SYNC)); then
