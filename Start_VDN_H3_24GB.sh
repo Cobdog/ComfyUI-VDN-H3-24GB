@@ -168,7 +168,7 @@ if [[ -z $PYTHON && -n ${VDN_CONDA_ENV:-} ]]; then
         try_python "conda env at $VDN_CONDA_ENV" "$VDN_CONDA_ENV/bin/python" \
             || die "VDN_CONDA_ENV is not a usable ComfyUI environment: $VDN_CONDA_ENV"
     elif command -v conda >/dev/null 2>&1; then
-        mapfile -t CONDA_ENVS < <(conda env list --json 2>/dev/null | grep -o '"/[^"]*"' | tr -d '"')
+        mapfile -t CONDA_ENVS < <(conda env list --json 2>/dev/null | sed -n '/"envs":/,/]/p' | grep -o '"/[^"]*"' | tr -d '"')
         CONDA_HIT=
         for e in "${CONDA_ENVS[@]}"; do
             if [[ $(basename -- "$e") == "$VDN_CONDA_ENV" ]]; then CONDA_HIT=$e; break; fi
@@ -198,7 +198,7 @@ if [[ -z $PYTHON ]]; then
 fi
 
 if [[ -z $PYTHON ]] && command -v conda >/dev/null 2>&1; then
-    mapfile -t CONDA_ENVS < <(conda env list --json 2>/dev/null | grep -o '"/[^"]*"' | tr -d '"')
+    mapfile -t CONDA_ENVS < <(conda env list --json 2>/dev/null | sed -n '/"envs":/,/]/p' | grep -o '"/[^"]*"' | tr -d '"')
     MATCHES=()
     for e in "${CONDA_ENVS[@]}"; do
         if [[ $(basename -- "${e,,}") == *comfy* ]]; then MATCHES+=("$e"); fi
