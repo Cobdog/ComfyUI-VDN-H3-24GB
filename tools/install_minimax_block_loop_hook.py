@@ -8,8 +8,8 @@ before the first change. Re-running is idempotent. Use --revert to restore it.
 
 import argparse
 import ast
+import os
 import re
-import shutil
 from pathlib import Path
 
 TARGET = Path("comfy/ldm/minimax/model.py")
@@ -126,6 +126,14 @@ def patch_text(text):
     return text
 
 
+def _atomic_write(path, data):
+    # Same-directory temp file + rename: a kill mid-write can never leave a
+    # partial or empty file behind.
+    tmp = path.with_name(path.name + ".vdn_tmp")
+    tmp.write_text(data, encoding="utf-8")
+    os.replace(tmp, path)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--comfy-ui", default=".", help="ComfyUI root (default: current directory)")
@@ -139,7 +147,10 @@ def main():
     if ns.revert:
         if not backup.is_file():
             raise SystemExit(f"VDN-H3-24GB: no backup found at {backup}")
-        shutil.copy2(backup, target)
+        saved = backup.read_text(encoding="utf-8")
+        if not saved.strip():
+            raise SystemExit(f"VDN-H3-24GB: backup at {backup} is empty; refusing to restore")
+        _atomic_write(target, saved)
         print(f"VDN-H3-24GB: restored {target} from {backup.name}")
         return
 
@@ -152,10 +163,13 @@ def main():
         return
 
     patched = patch_text(text)
-    if not backup.is_file():
-        shutil.copy2(target, backup)
+    first_backup = not backup.is_file()
+    # Always refresh the backup: this code path only runs on an unpatched
+    # target, so the saved copy is pristine even after a ComfyUI update.
+    _atomic_write(backup, text)
+    _atomic_write(target, patched)
+    if first_backup:
         print(f"VDN-H3-24GB: backup written to {backup}")
-    target.write_text(patched, encoding="utf-8")
     print(f"VDN-H3-24GB: block-loop hook installed in {target}")
 
 
