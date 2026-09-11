@@ -1,0 +1,15 @@
+# Extra arguments for ComfyUI's main.py, one per line. Lines starting with #
+# are comments. These are appended AFTER the VDN defaults, so they override
+# them (argparse keeps the last occurrence); arguments passed after -- on the
+# command line override this file in turn.
+#
+# Example - match a personal start.sh:
+#--listen
+#--enable-cors-header
+#--enable-manager
+#--port
+#8188
+#--output-directory
+#/home/you/AI/Inference/Output/comfy
+#--input-directory
+#/home/you/AI/Inference/Input/comfy

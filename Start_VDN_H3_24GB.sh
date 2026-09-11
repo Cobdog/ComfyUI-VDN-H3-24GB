@@ -22,6 +22,8 @@ Usage: ${0##*/} [--dry-run] [--revert-hook] [--uv-sync] [--python PATH] [-- MAIN
   -- ...         remaining arguments are passed to ComfyUI's main.py
 
 Conda environments can be chosen with VDN_CONDA_ENV (name or path).
+ComfyUI launch arguments can be saved, one per line, in Start_VDN_H3_24GB.args
+next to this script; they override the VDN defaults, and -- args override them.
 Exit codes: 0 success, 1 runtime error, 2 usage error. Requires bash >= 4.
 EOF
 }
@@ -293,6 +295,23 @@ else
 fi
 
 # ---- Launch ----
+# User-saved arguments (one per line, #-line comments) override the VDN
+# defaults; -- passthrough overrides the file.
+USER_ARGS=()
+ARGS_FILE=$NODE_DIR/Start_VDN_H3_24GB.args
+if [[ -f $ARGS_FILE ]]; then
+    while IFS= read -r line || [[ -n $line ]]; do
+        line=${line%$'\r'}
+        line=${line#"${line%%[![:space:]]*}"}
+        line=${line%"${line##*[![:space:]]}"}
+        if [[ -z $line || $line == \#* ]]; then continue; fi
+        USER_ARGS+=("$line")
+    done < "$ARGS_FILE"
+    if ((${#USER_ARGS[@]} > 0)); then
+        echo "$TAG adding ${#USER_ARGS[@]} launch argument(s) from ${ARGS_FILE##*/}"
+    fi
+fi
+
 ARGS=(main.py --listen 127.0.0.1 --port 8191 --disable-dynamic-vram --disable-async-offload)
 if "$PYTHON" -c "from sageattention import sageattn" >/dev/null 2>&1; then
     ARGS+=(--use-sage-attention)
@@ -300,6 +319,7 @@ if "$PYTHON" -c "from sageattention import sageattn" >/dev/null 2>&1; then
 else
     echo "$TAG SageAttention not found; launching without it. Performance may differ."
 fi
+ARGS+=(${USER_ARGS[@]+"${USER_ARGS[@]}"})
 ARGS+=(${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})
 
 if ((DRY_RUN)); then

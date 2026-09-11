@@ -9,7 +9,9 @@
   `*comfy*`-named conda environment, then `python3` — each validated with an
   `import sqlalchemy` check. Probes SageAttention before enabling it, and
   supports `--dry-run` (fully non-mutating), `--revert-hook`, `--uv-sync`
-  and `--` passthrough. Requires bash 4 or newer.
+  and `--` passthrough. Requires bash 4 or newer. Personal launch arguments
+  can be saved in `Start_VDN_H3_24GB.args` (one per line); they override the
+  VDN defaults, and `--` arguments override the file.
 - Added `Check_Installation_24GB.sh` and a `.gitattributes` keeping shell
   scripts LF-only and `.bat` files CRLF.
 - Corrected stale README instructions: the `VDN_CONDA_ENV` line the Windows

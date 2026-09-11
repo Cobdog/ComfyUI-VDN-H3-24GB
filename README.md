@@ -140,6 +140,24 @@ Options: `--dry-run` (resolve and validate everything and print the launch
 command without launching), `--revert-hook` (undo the block-loop hook and
 exit), `--uv-sync`, and `--` to forward extra arguments to `main.py`.
 
+Launch arguments you use routinely (your own port, CORS, manager, input and
+output directories) can be saved in `Start_VDN_H3_24GB.args` next to the
+script — one argument per line, `#` lines are comments:
+
+```text
+--listen
+--enable-cors-header
+--port
+8188
+--output-directory
+/home/you/AI/Inference/Output/comfy
+```
+
+They are appended after the VDN defaults, so they override them (for example
+`--listen` above replaces `--listen 127.0.0.1`, and ComfyUI keeps the last
+value); arguments passed after `--` override the file in turn. Model folder
+locations (`extra_model_paths.yaml`) are read by ComfyUI itself and unaffected.
+
 A launcher started in the background (shell `&`, cron) ignores Ctrl-C by
 POSIX rules; stop it with `kill -TERM <pid>`.
 
