@@ -54,6 +54,7 @@ __init__.py
 vdn_h3_24gb/
 tools/
 Start_VDN_H3_24GB.bat
+Start_VDN_H3_24GB.sh
 ```
 
 Do **not** leave an extra nested directory such as:
@@ -62,7 +63,8 @@ Do **not** leave an extra nested directory such as:
 custom_nodes/ComfyUI-VDN-H3-24GB-main/ComfyUI-VDN-H3-24GB/
 ```
 
-`Check_Installation_24GB.bat` can verify the basic layout.
+`Check_Installation_24GB.bat` (Windows) or `Check_Installation_24GB.sh`
+(Linux) can verify the basic layout.
 
 ## VDN checkpoint
 
@@ -92,28 +94,50 @@ the MiniMax-H3 base diffusion model.
 
 ## Starting ComfyUI
 
+### Windows
+
 The included `Start_VDN_H3_24GB.bat` resolves the ComfyUI root from its own
-location and can be run directly from the node folder.
+location and can be run directly from the node folder. It uses the Python that
+is active in the console, so activate your ComfyUI environment first. The BAT
+verifies Python, resolves the hook path, patches/checks the MiniMax block loop,
+and then starts ComfyUI with `--use-sage-attention`, which requires the
+SageAttention package to be installed in that environment.
 
-If your ComfyUI uses Conda, either activate the environment first or edit this
-line near the top of the BAT:
+If your ComfyUI uses Conda, `Start_VDN_H3_24GB_CONDA_TEMPLATE.bat` is included
+as an editable template that activates the environment first.
 
-```bat
-set "VDN_CONDA_ENV="
+### Linux
+
+Run from anywhere — the script locates the ComfyUI root and the node folder
+itself:
+
+```bash
+bash custom_nodes/ComfyUI-VDN-H3-24GB/Start_VDN_H3_24GB.sh
 ```
 
-For example:
+The script exports the same VDN-H3 environment profile as the BAT, runs the
+block-loop hook installer, and starts ComfyUI on `127.0.0.1:8191`. It also
+finds the Python environment by itself, in this order:
 
-```bat
-set "VDN_CONDA_ENV=ComfyUI_Krea2"
-```
+1. `--python /path/to/python`, or the `VDN_PYTHON` environment variable.
+2. Conda via `VDN_CONDA_ENV` (a bad value stops the script rather than falling
+   back).
+3. The already-active environment (`VIRTUAL_ENV` or `CONDA_PREFIX`).
+4. `venv/` or `.venv/` inside the ComfyUI root (a `.venv` created by `uv` is
+   used directly).
+5. The single conda environment whose name contains "comfy" (if several
+   match, you are asked to set `VDN_CONDA_ENV`).
+6. `python3` from `PATH`.
 
-The BAT verifies Python, resolves the hook path, patches/checks the MiniMax
-block loop, and then starts ComfyUI. If SageAttention is installed, it enables
-it automatically; otherwise it launches without that flag and warns that
-performance may differ.
+Every candidate must pass an `import sqlalchemy` check, so an empty or broken
+environment is skipped with a diagnostic instead of failing later inside
+ComfyUI. If `uv.lock` exists but no venv does, the script asks you to run
+`uv sync` (or pass `--uv-sync`). Unlike the BAT, the script only adds
+`--use-sage-attention` when SageAttention is importable, and warns otherwise.
 
-`Start_VDN_H3_24GB_CONDA_TEMPLATE.bat` is also included as an editable template.
+Options: `--dry-run` (resolve and validate everything and print the launch
+command without launching), `--revert-hook` (undo the block-loop hook and
+exit), `--uv-sync`, and `--` to forward extra arguments to `main.py`.
 
 ## Tested node preset
 
@@ -153,6 +177,9 @@ To restore the backup manually:
 ```bat
 python custom_nodes\ComfyUI-VDN-H3-24GB\tools\install_minimax_block_loop_hook.py --comfy-ui . --revert
 ```
+
+On Linux, `bash custom_nodes/ComfyUI-VDN-H3-24GB/Start_VDN_H3_24GB.sh --revert-hook`
+does the same.
 
 ## Tested profile
 

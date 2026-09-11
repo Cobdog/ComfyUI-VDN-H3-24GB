@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Added `Start_VDN_H3_24GB.sh`, a Linux launcher mirroring the BAT that
+  auto-detects the ComfyUI Python environment (active environment, `venv/`,
+  `.venv/` including uv-managed ones, conda via `VDN_CONDA_ENV` or a unique
+  `*comfy*` name, then `python3`), validates each candidate with an
+  `import sqlalchemy` check, probes SageAttention before enabling it, and
+  supports `--dry-run`, `--revert-hook`, `--uv-sync` and `--` passthrough.
+- Added `Check_Installation_24GB.sh` and a `.gitattributes` entry keeping
+  shell scripts LF-only.
+
 ## 1.1.0 — 2026-09-10
 
 Public release version: **1.1.0**.
